@@ -1,151 +1,126 @@
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, ExternalLink, Loader2, FileText } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-interface PreReadItem {
-  time: string;
-  className: string;
-  task: string;
+interface PreRead {
+  id: string;
+  title: string;
+  file_path: string;
+  file_name: string;
+  summary_status: string;
+  summary_text: string | null;
+  created_at: string;
+  courses?: { name: string } | null;
 }
-
-interface DayGroup {
-  date: string;
-  items: PreReadItem[];
-}
-
-const preReadsData: DayGroup[] = [
-  {
-    date: "9th Feb",
-    items: [
-      { time: "10:40 AM", className: "Managerial Economics", task: "Read Chapter 4" },
-      { time: "12:00 PM", className: "Business Analytics", task: "Review case study on clustering" },
-      { time: "2:30 PM", className: "Marketing Management", task: "Read HBR article on positioning" },
-    ],
-  },
-  {
-    date: "10th Feb",
-    items: [
-      { time: "9:00 AM", className: "Financial Accounting", task: "Read Chapter 7 - Cash Flows" },
-      { time: "11:15 AM", className: "Organizational Behaviour", task: "Watch pre-lecture video" },
-      { time: "3:00 PM", className: "Business Intelligence", task: "Complete SQL worksheet" },
-    ],
-  },
-  {
-    date: "11th Feb",
-    items: [
-      { time: "10:00 AM", className: "Managerial Economics", task: "Read Chapter 5 - Elasticity" },
-      { time: "1:00 PM", className: "Operations Management", task: "Review supply chain diagrams" },
-    ],
-  },
-];
-
-const mockSummaries: Record<string, string> = {
-  "Read Chapter 4":
-    "Chapter 4 covers demand analysis and estimation. Key topics: determinants of demand, elasticity concepts, and demand forecasting methods using regression analysis.",
-  "Review case study on clustering":
-    "This case study explores K-means and hierarchical clustering applied to customer segmentation in retail. Focus on interpreting dendrograms and choosing optimal K.",
-  "Read HBR article on positioning":
-    "The article discusses the importance of positioning strategy in competitive markets. Key framework: the positioning statement and perceptual mapping.",
-  "Read Chapter 7 - Cash Flows":
-    "Chapter 7 explains the statement of cash flows — operating, investing, and financing activities. Focus on indirect method preparation.",
-  "Watch pre-lecture video":
-    "Pre-lecture covers Maslow's hierarchy and Herzberg's two-factor theory of motivation in organizational settings.",
-  "Complete SQL worksheet":
-    "Worksheet covers JOINs, GROUP BY, HAVING clauses, and subqueries with practical business intelligence scenarios.",
-  "Read Chapter 5 - Elasticity":
-    "Chapter 5 dives into price, income, and cross elasticity of demand. Includes real-world applications and calculation practice.",
-  "Review supply chain diagrams":
-    "Review focuses on end-to-end supply chain flows, bullwhip effect, and inventory management strategies.",
-};
 
 const PreReadsSidebar = () => {
-  const [activeSummary, setActiveSummary] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [summaryText, setSummaryText] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const handleSparkle = (task: string) => {
-    if (activeSummary === task) {
-      setActiveSummary(null);
-      return;
+  const { data: preReads = [], isLoading } = useQuery<PreRead[]>({
+    queryKey: ["student-pre-reads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pre_reads")
+        .select("id, title, file_path, file_name, summary_status, summary_text, created_at, courses(name)")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data as PreRead[];
+    },
+  });
+
+  const handleOpenPdf = async (filePath: string) => {
+    const { data } = await supabase.storage
+      .from("pre-reads")
+      .createSignedUrl(filePath, 3600);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, "_blank");
     }
-    setActiveSummary(task);
-    setLoading(true);
-    setSummaryText("");
-    setTimeout(() => {
-      setLoading(false);
-      setSummaryText(mockSummaries[task] || "Summary not available for this item.");
-    }, 1200);
   };
+
+  // Group by date
+  const grouped = preReads.reduce<Record<string, PreRead[]>>((acc, pr) => {
+    const date = new Date(pr.created_at).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+    });
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(pr);
+    return acc;
+  }, {});
 
   return (
     <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-full overflow-y-auto border-l bg-card shadow-elevated">
       <div className="border-b px-5 py-3">
-        <h2 className="text-base font-semibold text-foreground">
-          Upcoming Pre-reads
-        </h2>
+        <h2 className="text-base font-semibold text-foreground">Pre-reads</h2>
       </div>
       <div className="p-4 space-y-5">
-        {preReadsData.map((group) => (
-          <div key={group.date}>
-            <div className="sticky top-0 z-10 mb-2 bg-card pb-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {group.date}
-              </span>
-            </div>
-            <div className="space-y-2">
-              {group.items.map((item) => (
-                <div key={item.time + item.task}>
-                  <div className="group flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-secondary">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">{item.time}</p>
-                      <p className="text-sm font-semibold text-foreground leading-snug">
-                        {item.className}
-                      </p>
-                      <p className="text-sm text-muted-foreground leading-snug">
-                        {item.task}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleSparkle(item.task)}
-                      className={`mt-1 flex-shrink-0 rounded-full p-1.5 transition-colors ${
-                        activeSummary === item.task
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                      }`}
-                      title="Generate AI Summary"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {activeSummary === item.task && (
-                    <div className="mx-2 mt-1 mb-1 rounded-md border bg-secondary p-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-primary flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" /> AI Summary
-                        </span>
-                        <button
-                          onClick={() => setActiveSummary(null)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      {loading ? (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                          Generating Summary...
-                        </div>
-                      ) : (
-                        <p className="text-xs leading-relaxed text-foreground">
-                          {summaryText}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <span className="text-sm">Loading…</span>
           </div>
-        ))}
+        ) : preReads.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <FileText className="h-8 w-8 mb-2 opacity-40" />
+            <p className="text-sm">No pre-reads available</p>
+          </div>
+        ) : (
+          Object.entries(grouped).map(([date, items]) => (
+            <div key={date}>
+              <div className="sticky top-0 z-10 mb-2 bg-card pb-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {date}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {items.map((pr) => (
+                  <div key={pr.id}>
+                    <div className="group flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-secondary">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground leading-snug">
+                          {pr.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {pr.courses?.name || "Unknown course"}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <button
+                            onClick={() => handleOpenPdf(pr.file_path)}
+                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" /> Open PDF
+                          </button>
+                          {pr.summary_status === "ready" && (
+                            <button
+                              onClick={() =>
+                                setExpandedId(expandedId === pr.id ? null : pr.id)
+                              }
+                              className="flex items-center gap-1 text-xs text-primary hover:underline"
+                            >
+                              <Sparkles className="h-3 w-3" /> AI Summary
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {expandedId === pr.id && pr.summary_text && (
+                      <div className="mx-2 mt-1 mb-1 rounded-md border bg-secondary p-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <p className="text-xs font-semibold text-primary flex items-center gap-1 mb-1.5">
+                          <Sparkles className="h-3 w-3" /> AI Summary
+                        </p>
+                        <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap">
+                          {pr.summary_text}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </aside>
   );

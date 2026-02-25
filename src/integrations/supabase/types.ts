@@ -41,6 +41,116 @@ export type Database = {
         }
         Relationships: []
       }
+      pre_reads: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          session_id: string | null
+          summarized_at: string | null
+          summary_model: string | null
+          summary_prompt: string | null
+          summary_status: string
+          summary_text: string | null
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          session_id?: string | null
+          summarized_at?: string | null
+          summary_model?: string | null
+          summary_prompt?: string | null
+          summary_status?: string
+          summary_text?: string | null
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          session_id?: string | null
+          summarized_at?: string | null
+          summary_model?: string | null
+          summary_prompt?: string | null
+          summary_status?: string
+          summary_text?: string | null
+          title?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_reads_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_reads_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "timetable_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetable_sessions: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          end_time: string | null
+          id: string
+          location: string | null
+          session_date: string | null
+          start_time: string | null
+          title: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          session_date?: string | null
+          start_time?: string | null
+          title?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          session_date?: string | null
+          start_time?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetable_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

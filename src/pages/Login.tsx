@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, X, Eye, EyeOff } from "lucide-react";
 import campusBg from "@/assets/campus-bg.jpg";
+import { setRole, type AppRole } from "@/hooks/useRole";
 
 type AuthMode = "login" | "signup";
 
@@ -19,6 +20,7 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<AppRole>("student");
 
   // Form state
   const [email, setEmail] = useState("");
@@ -32,6 +34,7 @@ const Login = () => {
       setAlert({ message: "Account created successfully!", type: "success" });
       setMode("login");
     } else {
+      setRole(selectedRole);
       navigate("/");
     }
   };
@@ -90,6 +93,37 @@ const Login = () => {
               Sign Up
             </button>
           </div>
+
+          {/* Role Switcher */}
+          {mode === "login" && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Login as:</span>
+              <div className="flex rounded-lg border bg-secondary/50 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("student")}
+                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                    selectedRole === "student"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Student
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("ta")}
+                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                    selectedRole === "ta"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Teaching Assistant
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
